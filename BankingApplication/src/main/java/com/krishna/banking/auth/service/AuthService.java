@@ -41,8 +41,7 @@ public class AuthService {
                        AuthenticationManager authenticationManager,
                        JwtEncoder jwtEncoder,
                        @Value("${jwt.issuer}") String jwtIssuer,
-                       RefreshTokenService refreshTokenService,
-                       RefreshTokenCookieService refreshTokenCookieService){
+                       RefreshTokenService refreshTokenService){
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
@@ -157,6 +156,13 @@ public class AuthService {
 
         refreshTokenService.revokeRefreshToken(refreshToken);
     }
+
+
+
+    public void logoutAll(Long userId){
+        refreshTokenService.revokeAllRefreshToken(userId);
+    }
+
 
 
     private UserResponseDto mapToDto(User user){

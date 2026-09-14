@@ -8,6 +8,7 @@ import com.krishna.banking.common.exceptions.UserNotFoundException;
 import com.krishna.banking.user.entity.User;
 import com.krishna.banking.user.entity.UserStatus;
 import com.krishna.banking.user.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
@@ -18,6 +19,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.List;
 
 
 @Service
@@ -52,8 +54,7 @@ public class RefreshTokenService {
                         new UserNotFoundException("User doesn't exist"));
 
         RefreshToken refreshToken = new RefreshToken();
-        Instant now = Instant.now();
-        refreshToken.setExpiresAt(now.plus(7, ChronoUnit.DAYS));
+        refreshToken.setExpiresAt(expiresAt);
         refreshToken.setTokenHash(tokenHash);
         refreshToken.setUser(user);
 
@@ -66,9 +67,7 @@ public class RefreshTokenService {
         byte[] bytes = new byte[32];
         random.nextBytes(bytes);
 
-        String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-
-        return token;
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
     private String hashRefreshToken(String token) {
@@ -130,5 +129,13 @@ public class RefreshTokenService {
                 oldToken.getUser().getId(),
                 oldToken.getExpiresAt()
         );
+    }
+
+
+    @Transactional
+    public void revokeAllRefreshToken(Long userId){
+        List<RefreshToken> refreshTokenList =
+                refreshTokenRepository.findByUserIdAndRevokedAtIsNull(userId);
+        refreshTokenList.forEach(token-> revokeRefreshToken(token));
     }
 }

@@ -11,14 +11,25 @@ public class RefreshTokenCookieService {
 
     public ResponseCookie createRefreshTokenCookie(String refreshToken){
 
-        ResponseCookie cookie =
-                ResponseCookie.from("refreshToken",refreshToken)
+        return ResponseCookie.from("refreshToken",refreshToken)
                         .httpOnly(true)
                         .secure(false)
                         .sameSite("lax")
                         .maxAge(Duration.ofDays(7))
                         .path("/auth")
                         .build();
-        return cookie;
+
+    }
+
+    public ResponseCookie deleteRefreshTokenCookie(){
+
+        return ResponseCookie.from("refreshToken","")
+                        .httpOnly(true)
+                        .secure(false)
+                        .sameSite("lax")
+                        .maxAge(Duration.ZERO)
+                        .path("/auth")
+                        .build();
+
     }
 }
