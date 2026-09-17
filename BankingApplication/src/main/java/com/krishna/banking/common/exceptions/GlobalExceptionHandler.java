@@ -30,6 +30,37 @@ public class GlobalExceptionHandler {
 
     }
 
+    @ExceptionHandler(AccountAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponseDto> handleAccountAlreadyExistsException
+            (AccountAlreadyExistsException ex) {
+        ErrorResponseDto responseDto = new ErrorResponseDto(
+                HttpStatus.CONFLICT.value(),
+                ex.getMessage(),
+                Instant.now(),
+                null
+        );
+
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(responseDto);
+
+    }
+
+    @ExceptionHandler(AccountAlreadyClosedException.class)
+    public ResponseEntity<ErrorResponseDto> handleAccountAlreadyClosedException
+            (AccountAlreadyClosedException ex) {
+
+        ErrorResponseDto responseDto = new ErrorResponseDto(
+                HttpStatus.CONFLICT.value(),
+                ex.getMessage(),
+                Instant.now(),
+                null
+        );
+
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(responseDto);
+
+    }
+
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<ErrorResponseDto> handleUserNotFoundException
             (UserNotFoundException ex) {
@@ -44,6 +75,25 @@ public class GlobalExceptionHandler {
                 .body(responseDto);
 
     }
+
+
+    @ExceptionHandler(AccountNotFoundException.class)
+    public ResponseEntity<ErrorResponseDto> handleAccountNotFoundException
+            (AccountNotFoundException ex) {
+        ErrorResponseDto responseDto = new ErrorResponseDto(
+                HttpStatus.NOT_FOUND.value(),
+                ex.getMessage(),
+                Instant.now(),
+                null
+        );
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(responseDto);
+
+    }
+
+
+
     @ExceptionHandler(InvalidRefreshTokenException.class)
     public ResponseEntity<ErrorResponseDto> handleInvalidRefreshTokenException
             (InvalidRefreshTokenException ex) {

@@ -39,7 +39,7 @@ public class SecurityConfig {
     ) throws Exception {
 
         http
-                .csrf(csrf -> csrf.spa()
+                .csrf(csrf -> csrf.disable() //later use .spa()
                 )
                 .authorizeHttpRequests(auth ->
                         auth.requestMatchers(
