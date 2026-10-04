@@ -61,6 +61,39 @@ public class GlobalExceptionHandler {
 
     }
 
+
+    @ExceptionHandler(InsufficientFundsException.class)
+    public ResponseEntity<ErrorResponseDto> handleInsufficientFundsException
+            (InsufficientFundsException ex) {
+
+        ErrorResponseDto responseDto = new ErrorResponseDto(
+                HttpStatus.CONFLICT.value(),
+                ex.getMessage(),
+                Instant.now(),
+                null
+        );
+
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(responseDto);
+
+    }
+    @ExceptionHandler(SameAccountTransferException.class)
+    public ResponseEntity<ErrorResponseDto> handleSameAccountTransferException
+            (SameAccountTransferException ex) {
+
+        ErrorResponseDto responseDto = new ErrorResponseDto(
+                HttpStatus.CONFLICT.value(),
+                ex.getMessage(),
+                Instant.now(),
+                null
+        );
+
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(responseDto);
+
+    }
+
+
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<ErrorResponseDto> handleUserNotFoundException
             (UserNotFoundException ex) {
@@ -131,4 +164,30 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseDto);
 
     }
+
+
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponseDto> handleHttpMessageNotReadableException(
+            MethodArgumentNotValidException ex) {
+
+
+        Map<String,String> fieldErrors = new HashMap<>();
+        ex.getBindingResult().getFieldErrors().forEach(
+                error-> fieldErrors.put(
+                        error.getField(),error.getDefaultMessage()
+                )
+        );
+        ErrorResponseDto responseDto = new ErrorResponseDto(
+                HttpStatus.BAD_REQUEST.value(),
+                "Invalid request body",
+                Instant.now(),
+                fieldErrors
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseDto);
+
+    }
+
+
+
 }

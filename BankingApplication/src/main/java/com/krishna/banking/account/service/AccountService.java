@@ -1,17 +1,17 @@
 package com.krishna.banking.account.service;
 
-import com.krishna.banking.account.dto.AccountResponseDto;
-import com.krishna.banking.account.dto.CreateAccountRequestDto;
+import com.krishna.banking.account.dto.*;
 import com.krishna.banking.account.entity.Account;
 import com.krishna.banking.account.entity.AccountStatus;
 import com.krishna.banking.account.repository.AccountRepository;
-import com.krishna.banking.common.exceptions.AccountAlreadyClosedException;
-import com.krishna.banking.common.exceptions.AccountAlreadyExistsException;
-import com.krishna.banking.common.exceptions.AccountNotFoundException;
-import com.krishna.banking.common.exceptions.UserNotFoundException;
+import com.krishna.banking.common.exceptions.*;
+import com.krishna.banking.transaction.service.TransactionService;
 import com.krishna.banking.user.entity.User;
 import com.krishna.banking.user.repository.UserRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.transaction.Transactional;
+
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -23,14 +23,20 @@ public class AccountService {
     private final AccountRepository accountRepository;
     private final UserRepository userRepository;
     private final AccountNumberGenerator numberGenerator;
+    private final TransactionService transactionService;
+    private final EntityManager entityManager;
 
     public AccountService(
             AccountRepository accountRepository,
             UserRepository userRepository,
-            AccountNumberGenerator numberGenerator) {
+            AccountNumberGenerator numberGenerator,
+            TransactionService transactionService,
+            EntityManager entityManager) {
         this.accountRepository = accountRepository;
         this.userRepository = userRepository;
         this.numberGenerator = numberGenerator;
+        this.transactionService = transactionService;
+        this.entityManager = entityManager;
     }
 
 
@@ -108,11 +114,161 @@ public class AccountService {
     }
 
 
+    //Account + Transaction service methods
+
+    @Transactional
+    public void deposit(Long userId,
+                        DepositRequestDto requestDto,
+                        String accountNumber){
+
+        Account account =
+                accountRepository.findLockedAccount(
+                        accountNumber,userId)
+                        .orElseThrow(()->
+                                new AccountNotFoundException("Account not found"));
+
+        if(account.getAccountStatus() == AccountStatus.CLOSED){
+            throw new AccountAlreadyClosedException("Account already closed");
+        }
+
+        account.setBalance
+                (account.getBalance()
+                        .add(requestDto.amount()));
 
 
+        transactionService.createDepositTransaction(account,
+                requestDto.amount(),
+                requestDto.paymentMethod());
 
 
+    }
 
 
+    @Transactional
+    public void withdraw(Long userId,
+                         WithdrawalRequestDto requestDto,
+                         String accountNumber) {
+        Account account =
+                accountRepository.findLockedAccount(
+                        accountNumber,userId)
+                        .orElseThrow(()->
+                                new AccountNotFoundException("Account not found"));
 
+
+        if(account.getAccountStatus() == AccountStatus.CLOSED) {
+            throw new AccountAlreadyClosedException("Account already closed");
+        }
+
+        if(account.getBalance().compareTo(requestDto.amount()) < 0){
+            throw new InsufficientFundsException("Funds not sufficient");
+        }
+
+        account.setBalance(account.getBalance().subtract(requestDto.amount()));
+
+        transactionService.createWithdrawTransaction(account,
+                requestDto.amount(),
+                requestDto.paymentMethod());
+
+
+    }
+
+    @Transactional
+    public void transfer(
+            Long userId,
+            TransferRequestDto requestDto,
+            String sourceAccountNumber) {
+
+        // 1. Identify source
+        Account sourceAccount =
+                accountRepository.findByAccountNumberAndUserId(
+                                sourceAccountNumber,
+                                userId
+                        )
+                        .orElseThrow(() ->
+                                new AccountNotFoundException("Account not found"));
+
+        // 2. Identify destination
+        Account destinationAccount =
+                accountRepository.findByAccountNumber(
+                                requestDto.destinationAccountNumber()
+                        )
+                        .orElseThrow(() ->
+                                new AccountNotFoundException("Account not found"));
+
+        // 3. Get IDs
+        Long sourceId = sourceAccount.getId();
+        Long destinationId = destinationAccount.getId();
+
+        // 4. Same account check
+        if (sourceId.equals(destinationId)) {
+            throw new SameAccountTransferException(
+                    "Cannot transfer money in same account"
+            );
+        }
+
+        // 5. Determine LOCK ORDER only
+        Account firstAccount;
+        Account secondAccount;
+
+        if (sourceId < destinationId) {
+            firstAccount = sourceAccount;
+            secondAccount = destinationAccount;
+        } else {
+            firstAccount = destinationAccount;
+            secondAccount = sourceAccount;
+        }
+
+        // 6. Lock + refresh in consistent order
+        entityManager.refresh(
+                firstAccount,
+                LockModeType.PESSIMISTIC_WRITE
+        );
+
+        entityManager.refresh(
+                secondAccount,
+                LockModeType.PESSIMISTIC_WRITE
+        );
+
+        // 7. Validate SOURCE
+        if (sourceAccount.getAccountStatus() == AccountStatus.CLOSED) {
+            throw new AccountAlreadyClosedException(
+                    "Account already closed"
+            );
+        }
+
+        // 8. Validate DESTINATION
+        if (destinationAccount.getAccountStatus() == AccountStatus.CLOSED) {
+            throw new AccountAlreadyClosedException(
+                    "Account already closed"
+            );
+        }
+
+        // 9. Check SOURCE balance
+        if (sourceAccount.getBalance()
+                .compareTo(requestDto.amount()) < 0) {
+
+            throw new InsufficientFundsException(
+                    "Funds not sufficient"
+            );
+        }
+
+        // 10. Move money
+        sourceAccount.setBalance(
+                sourceAccount.getBalance()
+                        .subtract(requestDto.amount())
+        );
+
+        destinationAccount.setBalance(
+                destinationAccount.getBalance()
+                        .add(requestDto.amount())
+        );
+
+        // 11. Record transaction
+        transactionService.createTransferTransaction(
+                sourceAccount,
+                destinationAccount,
+                requestDto.amount(),
+                requestDto.paymentMethod()
+        );
+    }
 }

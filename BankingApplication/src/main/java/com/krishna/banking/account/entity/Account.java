@@ -23,7 +23,7 @@ public class Account {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false,unique = true)
+    @Column(nullable = false,unique = true,length = 12)
     private String accountNumber;
 
     @ManyToOne(fetch = FetchType.LAZY,optional = false)

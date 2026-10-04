@@ -1,7 +1,6 @@
 package com.krishna.banking.account.controller;
 
-import com.krishna.banking.account.dto.AccountResponseDto;
-import com.krishna.banking.account.dto.CreateAccountRequestDto;
+import com.krishna.banking.account.dto.*;
 import com.krishna.banking.account.service.AccountService;
 import com.krishna.banking.user.security.CurrentUser;
 import jakarta.validation.Valid;
@@ -68,6 +67,50 @@ public class AccountController {
         accountService.closeAccount(userId,accountNumber);
 
         return ResponseEntity.noContent().build();
+    }
+
+    //Transactions endpoints
+
+    @PostMapping("/{accountNumber}/deposit")
+    public ResponseEntity<SuccessResponseDto> deposit(
+            @PathVariable String accountNumber,
+            @Valid @RequestBody DepositRequestDto requestDto
+    ){
+
+        Long userId = currentUser.getId();
+
+        accountService.deposit(userId,requestDto,accountNumber);
+
+        return ResponseEntity.ok(new SuccessResponseDto("Deposit successful"));
+
+    }
+
+    @PostMapping("/{accountNumber}/withdraw")
+    public ResponseEntity<SuccessResponseDto> withdraw(
+            @PathVariable String accountNumber,
+            @Valid @RequestBody WithdrawalRequestDto requestDto
+    ){
+
+        Long userId = currentUser.getId();
+
+        accountService.withdraw(userId,requestDto,accountNumber);
+
+        return ResponseEntity.ok(new SuccessResponseDto("Withdrawal successful"));
+
+    }
+
+    @PostMapping("/{sourceAccountNumber}/transfer")
+    public ResponseEntity<SuccessResponseDto> transfer(
+            @PathVariable String sourceAccountNumber,
+            @Valid @RequestBody TransferRequestDto requestDto
+    ){
+
+        Long userId = currentUser.getId();
+
+        accountService.transfer(userId,requestDto,sourceAccountNumber);
+
+        return ResponseEntity.ok(new SuccessResponseDto("Transfer successful"));
+
     }
 }
 
