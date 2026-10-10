@@ -87,15 +87,19 @@ public class AccountService {
     }
 
     @Transactional
-    public void closeAccount(Long userId, String accountNumber){
+    public void closeAccount(Long userId, String accountNumber) {
 
         Account account =
-                accountRepository.findByAccountNumberAndUserId(accountNumber,userId)
-                        .orElseThrow(()->
+                accountRepository.findLockedAccount(
+                                accountNumber, userId
+                        )
+                        .orElseThrow(() ->
                                 new AccountNotFoundException("Account not found"));
 
-        if(account.getAccountStatus() == AccountStatus.CLOSED){
-            throw new AccountAlreadyClosedException("Account already closed");
+        if (account.getAccountStatus() == AccountStatus.CLOSED) {
+            throw new AccountAlreadyClosedException(
+                    "Account already closed"
+            );
         }
 
         account.setAccountStatus(AccountStatus.CLOSED);

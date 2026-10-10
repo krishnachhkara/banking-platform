@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -163,6 +164,34 @@ public class GlobalExceptionHandler {
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseDto);
 
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String,String>> handleMethodArgumentTypeMismatchException(
+            MethodArgumentTypeMismatchException ex){
+
+        String message = switch (ex.getName()){
+            case "page" -> "Page must be a valid integer";
+            case "size" -> "Page size must be a valid integer";
+            default -> "Invalid value for parameter: " + ex.getName();
+        };
+
+        return ResponseEntity.badRequest()
+                .body(Map.of("message", message));
+
+    }
+
+    @ExceptionHandler(InvalidPaginationParameterException.class)
+    public ResponseEntity<Map<String, String>> handleInvalidPaginationParameterException(
+            InvalidPaginationParameterException ex) {
+
+        Map<String, String> response = new HashMap<>();
+
+        response.put("message", ex.getMessage());
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(response);
     }
 
 

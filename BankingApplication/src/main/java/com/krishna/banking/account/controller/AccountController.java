@@ -2,8 +2,15 @@ package com.krishna.banking.account.controller;
 
 import com.krishna.banking.account.dto.*;
 import com.krishna.banking.account.service.AccountService;
+import com.krishna.banking.common.exceptions.InvalidPaginationParameterException;
+import com.krishna.banking.transaction.dto.TransactionResponseDto;
+import com.krishna.banking.transaction.service.TransactionService;
 import com.krishna.banking.user.security.CurrentUser;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,11 +23,14 @@ public class AccountController {
 
     private final AccountService accountService;
     private final CurrentUser currentUser;
+    private  final TransactionService transactionService;
 
     public AccountController(AccountService accountService,
-                             CurrentUser currentUser) {
+                             CurrentUser currentUser,
+                             TransactionService transactionService) {
         this.accountService = accountService;
         this.currentUser = currentUser;
+        this.transactionService = transactionService;
     }
 
 
@@ -111,6 +121,42 @@ public class AccountController {
 
         return ResponseEntity.ok(new SuccessResponseDto("Transfer successful"));
 
+    }
+
+    @GetMapping("/{accountNumber}/transactions")
+    public ResponseEntity<Page<TransactionResponseDto>> transactionHistory(
+            @PathVariable String accountNumber,
+
+            @RequestParam (name = "page",required = false)
+            Integer requestedPage,
+
+            @RequestParam (name = "size", required = false)
+            Integer requestedSize,
+
+            @PageableDefault(
+                    size = 10,
+                    sort = {"createdAt","id"},
+                    direction = Sort.Direction.DESC)
+            Pageable pageable){
+
+        Long userId = currentUser.getId();
+
+        if(requestedPage != null && requestedPage < 0){
+            throw new InvalidPaginationParameterException(
+                    "Page must be greater than or equal to 0"
+            );
+        }
+
+        if(requestedSize != null && (requestedSize < 1 || requestedSize > 100)){
+            throw new InvalidPaginationParameterException(
+                    "Page size must be between 1 and 100"
+            );
+        }
+
+        Page<TransactionResponseDto> transactions =
+                transactionService.transactionHistory(userId,accountNumber,pageable);
+
+        return ResponseEntity.ok(transactions);
     }
 }
 
